@@ -252,6 +252,199 @@ Response:
 
 ------------------------------------------------------------------------
 
+# 📦 DVC Integration Guide --- Bottle Defect Classification Project
+
+This document explains how to integrate **DVC (Data Version Control)**
+into the ResNet MLOps project for proper dataset and model versioning.
+
+DVC helps track large files (datasets, models) while keeping Git
+repositories lightweight and reproducible.
+
+------------------------------------------------------------------------
+
+# 🚀 Why Use DVC?
+
+In MLOps pipelines:
+
+-   ❌ Git is not suitable for large datasets
+-   ❌ Models are large binary files
+-   ❌ Reproducibility becomes difficult
+
+DVC solves this by:
+
+-   ✅ Versioning datasets
+-   ✅ Versioning model artifacts
+-   ✅ Enabling reproducible pipelines
+-   ✅ Supporting remote storage (S3, GDrive, etc.)
+
+------------------------------------------------------------------------
+
+# 🧰 Step-by-Step DVC Implementation
+
+Follow these steps from your project root.
+
+------------------------------------------------------------------------
+
+## 1️⃣ Install DVC
+
+``` bash
+pip install dvc
+```
+
+Verify:
+
+``` bash
+dvc --version
+```
+
+------------------------------------------------------------------------
+
+## 2️⃣ Initialize DVC in the Project
+
+Run inside project root:
+
+``` bash
+dvc init
+```
+
+This creates:
+
+    .dvc/
+    .dvcignore
+
+Now commit to Git:
+
+``` bash
+git add .dvc .dvcignore
+git commit -m "Initialize DVC"
+```
+
+------------------------------------------------------------------------
+
+## 3️⃣ Track the Raw Dataset
+
+We track the **raw data folder**, not individual files.
+
+``` bash
+dvc add data/raw
+```
+
+This creates:
+
+    data/raw.dvc
+
+------------------------------------------------------------------------
+
+## 4️⃣ Update .gitignore (Automatic)
+
+DVC automatically adds:
+
+    data/raw
+
+to `.gitignore` so Git does not store large files.
+
+------------------------------------------------------------------------
+
+## 5️⃣ Commit DVC Metadata
+
+``` bash
+git add data/raw.dvc .gitignore
+git commit -m "Track raw dataset with DVC"
+```
+
+------------------------------------------------------------------------
+
+# 🔄 Data Reproducibility Workflow
+
+## Pull data (on new machine)
+
+``` bash
+dvc pull
+```
+
+## Push data to remote
+
+``` bash
+dvc push
+```
+
+------------------------------------------------------------------------
+
+# ☁️ (Optional but Recommended) Add Remote Storage
+
+Example using local remote:
+
+``` bash
+mkdir -p ~/dvc-storage
+dvc remote add -d localstorage ~/dvc-storage
+```
+
+Push data:
+
+``` bash
+dvc push
+```
+
+------------------------------------------------------------------------
+
+# 🧠 Track Processed Data (Optional)
+
+If you want full pipeline reproducibility:
+
+``` bash
+dvc add data/processed
+git add data/processed.dvc .gitignore
+git commit -m "Track processed dataset with DVC"
+```
+
+------------------------------------------------------------------------
+
+# 🧠 Track Model Artifacts (Recommended)
+
+``` bash
+dvc add artifacts/model.pth
+git add artifacts/model.pth.dvc .gitignore
+git commit -m "Track trained model with DVC"
+```
+
+------------------------------------------------------------------------
+
+# 🔁 Typical Daily Workflow
+
+## After data changes
+
+``` bash
+dvc add data/raw
+git add data/raw.dvc
+git commit -m "Update dataset version"
+dvc push
+```
+
+------------------------------------------------------------------------
+
+## After model retraining
+
+``` bash
+dvc add artifacts/model.pth
+git add artifacts/model.pth.dvc
+git commit -m "Update model version"
+dvc push
+```
+
+------------------------------------------------------------------------
+
+# 📈 What This Achieves
+
+With DVC integrated, your project now supports:
+
+-   ✅ Dataset versioning\
+-   ✅ Model versioning\
+-   ✅ Reproducible ML pipeline\
+-   ✅ Lightweight Git repo\
+-   ✅ Production-ready MLOps workflow
+
+------------------------------------------------------------------------
+
 # 📈 What This Project Demonstrates
 
 This project showcases **real MLOps fundamentals**:
