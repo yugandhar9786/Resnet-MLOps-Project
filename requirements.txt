@@ -1,13 +1,9 @@
-# ===== Core ML =====
-torch>=2.1.0
-torchvision>=0.16.0
-pillow>=10.0.0
-numpy>=1.24.0
+--extra-index-url https://download.pytorch.org/whl/cpu
 
-# ===== API =====
-fastapi>=0.110.0
-uvicorn[standard]>=0.27.0
-python-multipart>=0.0.6
-
-# ===== Utilities =====
-tqdm>=4.66.0
+fastapi==0.129.0
+uvicorn==0.41.0
+torch==2.3.1+cpu
+torchvision==0.18.1+cpu
+numpy==2.4.2
+pillow==12.1.1
+python-multipart==0.0.22

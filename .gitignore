@@ -1,6 +1,61 @@
+# ================================
+# 🔥 NEVER COPY THESE (VERY BIG)
+# ================================
+
+# virtual environments
 .venv
-.dvc
-logs/
+.venv/
+**/.venv/**
+venv/
+**/venv/**
+
+# datasets
+data
+data/
+**/data/**
+
+# artifacts
+artifacts
 artifacts/
+**/artifacts/**
+
+# mlflow
+mlruns
+mlruns/
+**/mlruns/**
+
+# model weights
+**/*.pt
+**/*.pth
+**/*.ckpt
+**/*.h5
+**/*.onnx
+
+# ================================
+# 🔥 Git & DVC
+# ================================
+.git
+.git/
+**/.git/**
+
+.dvc
+.dvc/
+**/.dvc/**
+dvc/.cache
+
+# ================================
+# 🔥 Python junk
+# ================================
 __pycache__/
-/data
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# ================================
+# 🔥 notebooks & misc
+# ================================
+notebooks/
+*.log
+.env
+.DS_Store

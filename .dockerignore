@@ -1,0 +1,44 @@
+# ================================
+# 🔥 NEVER COPY THESE
+# ================================
+
+# virtual env
+.venv
+.venv/
+**/.venv/**
+
+# data
+data
+data/
+**/data/**
+
+# artifacts
+artifacts/*
+!artifacts/
+!artifacts/classes.json
+!artifacts/model.pth
+
+# mlflow
+mlruns
+mlruns/
+**/mlruns/**
+
+# git & dvc
+.git
+.git/
+.dvc
+.dvc/
+**/.dvc/**
+
+# python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# notebooks & misc
+notebooks/
+*.log
+.env
+.DS_Store

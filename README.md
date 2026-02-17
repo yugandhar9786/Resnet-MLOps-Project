@@ -445,6 +445,193 @@ With DVC integrated, your project now supports:
 
 ------------------------------------------------------------------------
 
+# 🚀 ResNet MLOps Project --- Production Dockerization & Registry Push
+
+## 📌 Overview
+
+This document describes the **step-by-step production workflow**
+followed to containerize a FastAPI-based ResNet model and push the image
+to Docker Hub.
+
+------------------------------------------------------------------------
+
+## ✅ Step 1: Clean the Project for Docker
+
+### Problem
+
+-   Docker build context was extremely large (GBs).
+-   `.venv`, `data`, and `artifacts` were being sent to Docker.
+
+### Solution
+
+Created a strong `.dockerignore` to exclude unnecessary files.
+
+**Key ignores:** - `.venv/` - `data/` - `mlruns/` - `.git/` - large
+artifacts
+
+------------------------------------------------------------------------
+
+## ✅ Step 2: Fix Bloated requirements.txt
+
+### Problem
+
+`pip freeze` produced:
+
+-   hundreds of packages\
+-   CUDA dependencies\
+-   duplicates\
+-   training-only libraries
+
+This caused:
+
+-   huge Docker image\
+-   slow builds\
+-   potential conflicts
+
+### Solution
+
+Replaced with **minimal inference requirements**:
+
+``` txt
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+fastapi==0.129.0
+uvicorn==0.41.0
+torch==2.3.1+cpu
+torchvision==0.18.1+cpu
+numpy==2.4.2
+pillow==12.1.1
+python-multipart==0.0.22
+```
+
+------------------------------------------------------------------------
+
+## ✅ Step 3: Build Production Docker Image
+
+### Base Image
+
+``` dockerfile
+FROM python:3.11-slim
+```
+
+### Key Improvements
+
+-   CPU-only PyTorch\
+-   pip cache disabled\
+-   minimal dependencies\
+-   clean build layers
+
+### Build Command
+
+``` bash
+docker build --no-cache -t resnet-mlops:latest .
+```
+
+------------------------------------------------------------------------
+
+## ✅ Step 4: Handle Missing Artifacts
+
+### Problems Encountered
+
+Runtime errors:
+
+-   `classes.json` not found\
+-   `model.pth` not found
+
+### Root Cause
+
+`.dockerignore` excluded the entire `artifacts/` folder.
+
+### Solution
+
+Used **selective allow pattern**:
+
+``` dockerignore
+artifacts/*
+!artifacts/
+!artifacts/classes.json
+!artifacts/model.pth
+```
+
+✅ Keeps image small\
+✅ Ships required inference assets
+
+------------------------------------------------------------------------
+
+## ✅ Step 5: Verify Container Locally
+
+### Run Container
+
+``` bash
+docker run -p 8001:8000 resnet-mlops:latest
+```
+
+### Verification
+
+-   FastAPI started\
+-   Swagger UI accessible\
+-   `/predict` endpoint working\
+-   Model loaded successfully
+
+------------------------------------------------------------------------
+
+## ✅ Step 6: Tag Image for Docker Hub
+
+Docker Hub requires:
+
+    <username>/<repo>:<tag>
+
+### Command
+
+``` bash
+docker tag resnet-mlops:latest yugandhar7/resnet-mlops:latest
+```
+
+------------------------------------------------------------------------
+
+## ✅ Step 7: Login to Docker Hub
+
+``` bash
+docker login
+```
+
+Result:
+
+    Login Succeeded
+
+------------------------------------------------------------------------
+
+## ✅ Step 8: Push Image to Docker Hub
+
+``` bash
+docker push yugandhar7/resnet-mlops:latest
+```
+
+### Observed Behavior
+
+-   Some layers retried due to network\
+-   Second push succeeded\
+-   Layers deduplicated
+
+### Final Success
+
+    latest: digest: sha256:0b6dea97800c81cc7643e6db1285bea42ee38802bd605f2cf88b397b6d46e867
+
+------------------------------------------------------------------------
+
+# 🏆 Achievements
+
+You now have:
+
+-   ✅ Production-ready FastAPI container\
+-   ✅ CPU-optimized PyTorch image\
+-   ✅ Clean dependency management\
+-   ✅ Proper artifact handling\
+-   ✅ Image published to Docker Hub\
+-   ✅ Kubernetes/KServe ready base
+
+------------------------------------------------------------------------
+
 # 📈 What This Project Demonstrates
 
 This project showcases **real MLOps fundamentals**:
