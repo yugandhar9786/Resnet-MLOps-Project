@@ -1,5 +1,5 @@
 .venv
-data/
+
 logs/
 artifacts/
 __pycache__/
