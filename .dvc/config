@@ -1,4 +1,0 @@
-[core]
-    remote = resnet-model
-['remote "resnet-model"']
-    url = s3://resnet-model-bucket-demo/data/

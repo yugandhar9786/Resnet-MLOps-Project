@@ -1,5 +1,5 @@
 .venv
-
+.dvc
 logs/
 artifacts/
 __pycache__/
