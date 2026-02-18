@@ -5,6 +5,9 @@ import torch.nn as nn
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from PIL import Image
 from torchvision import transforms, models
+from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_client import Counter, Histogram
+
 
 # =========================
 # Config
@@ -18,6 +21,21 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 app = FastAPI(
     title="Bottle Defect Classifier",
     version="1.0"
+)
+Instrumentator().instrument(app).expose(app)
+
+# =========================
+# Custom Model Metrics
+# =========================
+PREDICTION_COUNTER = Counter(
+    "model_predictions_total",
+    "Total number of predictions",
+    ["predicted_class"]
+)
+
+CONFIDENCE_HISTOGRAM = Histogram(
+    "model_confidence",
+    "Prediction confidence distribution"
 )
 
 # =========================
@@ -72,7 +90,15 @@ async def predict(file: UploadFile = File(...)):
         probs = torch.softmax(outputs, dim=1)
         conf, pred = torch.max(probs, dim=1)
 
+    predicted_class = classes[pred.item()]
+    confidence_value = float(conf.item())
+
+    # 🔥 update metrics
+    PREDICTION_COUNTER.labels(predicted_class=predicted_class).inc()
+    CONFIDENCE_HISTOGRAM.observe(confidence_value)
+
     return {
-        "prediction": classes[pred.item()],
-        "confidence": float(conf.item())
+        "prediction": predicted_class,
+        "confidence": confidence_value,
+        "model_version": "v1.0.1"
     }
