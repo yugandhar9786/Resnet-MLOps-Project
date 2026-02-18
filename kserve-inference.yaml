@@ -1,0 +1,13 @@
+apiVersion: "serving.kserve.io/v1beta1"
+kind: "InferenceService"
+metadata:
+  name: resnet-mlops
+  namespace: mlops
+spec:
+  predictor:
+    containers:
+      - name: kserve-container
+        image: yugandhar7/resnet-mlops:latest
+        ports:
+          - containerPort: 8000
+
