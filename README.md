@@ -632,6 +632,421 @@ You now have:
 
 ------------------------------------------------------------------------
 
+# 🚀 KServe End-to-End Implementation (Senior MLOps Guide)
+
+This document explains how to deploy a Dockerized ML model using
+**KServe RawDeployment mode** on Kubernetes.
+
+------------------------------------------------------------------------
+
+## 🧭 Architecture Overview
+
+    Model → Docker → Docker Hub → Kubernetes → KServe → Inference Endpoint
+
+------------------------------------------------------------------------
+
+## ✅ Step 1 --- Prerequisites
+
+Ensure the following are installed:
+
+-   Docker
+-   kubectl
+-   Helm
+-   Minikube (or any Kubernetes cluster)
+-   Docker image pushed to Docker Hub
+
+Verify kubectl:
+
+``` bash
+kubectl version --client
+```
+
+------------------------------------------------------------------------
+
+## ✅ Step 2 --- Start Kubernetes Cluster
+
+``` bash
+minikube start --memory=8192 --cpus=4
+minikube addons enable ingress
+kubectl get nodes
+```
+
+Expected: `STATUS = Ready`
+
+------------------------------------------------------------------------
+
+## ✅ Step 3 --- Install cert-manager
+
+``` bash
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+kubectl get pods -n cert-manager
+```
+
+Ensure all pods are **Running**.
+
+------------------------------------------------------------------------
+
+## ✅ Step 4 --- Create KServe Namespace
+
+``` bash
+kubectl create namespace kserve
+```
+
+------------------------------------------------------------------------
+
+## ✅ Step 5 --- Install KServe CRDs
+
+``` bash
+helm install kserve-crd oci://ghcr.io/kserve/charts/kserve-crd   --version v0.16.0   -n kserve   --wait
+```
+
+------------------------------------------------------------------------
+
+## ✅ Step 6 --- Install KServe Controller (RawDeployment Mode)
+
+``` bash
+helm install kserve oci://ghcr.io/kserve/charts/kserve   --version v0.16.0   -n kserve   --set kserve.controller.deploymentMode=RawDeployment   --wait
+```
+
+Verify:
+
+``` bash
+kubectl get pods -n kserve
+```
+
+------------------------------------------------------------------------
+
+## ✅ Step 7 --- Create Application Namespace
+
+``` bash
+kubectl create namespace mlops
+```
+
+------------------------------------------------------------------------
+
+## ✅ Step 8 --- Create InferenceService YAML
+
+Create file: `kserve-inference.yaml`
+
+``` yaml
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: resnet-mlops
+  namespace: mlops
+spec:
+  predictor:
+    containers:
+      - name: kserve-container
+        image: yugandhar7/resnet-mlops:latest
+        ports:
+          - containerPort: 8000
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+```
+
+------------------------------------------------------------------------
+
+## ✅ Step 9 --- Deploy InferenceService
+
+``` bash
+kubectl apply -f kserve-inference.yaml
+kubectl get inferenceservices -n mlops -w
+```
+
+Wait until `READY = True`.
+
+------------------------------------------------------------------------
+
+## ✅ Step 10 --- Verify Resources
+
+``` bash
+kubectl get svc -n mlops
+kubectl get pods -n mlops
+```
+
+------------------------------------------------------------------------
+
+## ✅ Step 11 --- Port Forward for Local Testing
+
+``` bash
+kubectl port-forward -n mlops   pod/resnet-mlops-predictor-XXXXX   8080:8000
+```
+
+Access:
+
+    http://localhost:8080
+
+------------------------------------------------------------------------
+
+## ✅ Step 12 --- Open Swagger UI
+
+Open in browser:
+
+    http://localhost:8080/docs
+
+------------------------------------------------------------------------
+
+## ✅ Step 13 --- Test Prediction Endpoint
+
+Since the API expects file upload:
+
+``` bash
+curl -X POST "http://localhost:8080/predict"   -F "file=@test.jpg"
+```
+
+------------------------------------------------------------------------
+
+## 🔍 Step 14 --- Debug Commands
+
+``` bash
+kubectl get pods -n mlops
+kubectl logs -n mlops <pod-name>
+kubectl describe inferenceservice resnet-mlops -n mlops
+```
+
+------------------------------------------------------------------------
+
+## 🏆 Best Practices
+
+-   Bind FastAPI to `0.0.0.0:8000`
+-   Always set resource limits
+-   Use separate namespace
+-   Use RawDeployment for custom containers
+-   Use port-forward only for local testing
+-   In production → use ingress/LoadBalancer
+
+# 🚀 NGINX Ingress Setup for KServe on kind (Step-by-Step)
+
+This guide explains how to expose a KServe InferenceService using
+**NGINX Ingress** on a local **kind** Kubernetes cluster.\
+It simulates a production-grade traffic flow without requiring any cloud
+platform.
+
+------------------------------------------------------------------------
+
+## 🧭 Architecture Overview
+
+    Browser → NGINX Ingress → KServe Service → Predictor Pod
+
+------------------------------------------------------------------------
+
+## ✅ Prerequisites
+
+Ensure you have:
+
+-   kind cluster running
+-   kubectl installed
+-   KServe installed
+-   InferenceService deployed and READY
+-   Service `resnet-mlops-predictor` present in `mlops` namespace
+
+Verify:
+
+``` bash
+kubectl get inferenceservices -n mlops
+kubectl get svc -n mlops
+```
+
+------------------------------------------------------------------------
+
+## 🚀 Step 1 --- Install ingress-nginx (kind provider)
+
+``` bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+```
+
+------------------------------------------------------------------------
+
+## 🚀 Step 2 --- Wait for Controller
+
+``` bash
+kubectl get pods -n ingress-nginx -w
+```
+
+Wait until:
+
+    ingress-nginx-controller   Running
+
+------------------------------------------------------------------------
+
+## 🚀 Step 3 --- Verify IngressClass
+
+``` bash
+kubectl get ingressclass
+```
+
+Expected:
+
+    nginx
+
+------------------------------------------------------------------------
+
+## 🚀 Step 4 --- Create Ingress Resource
+
+Create file: `kserve-ingress.yaml`
+
+``` yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: resnet-mlops-ingress
+  namespace: mlops
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: resnet-demo.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: resnet-mlops-predictor
+                port:
+                  number: 80
+```
+
+------------------------------------------------------------------------
+
+## 🚀 Step 5 --- Apply Ingress
+
+``` bash
+kubectl apply -f kserve-ingress.yaml
+kubectl get ingress -n mlops
+```
+
+------------------------------------------------------------------------
+
+## 🚀 Step 6 --- Update Local Hosts File
+
+Because this is a local cluster, map the domain manually.
+
+Edit:
+
+``` bash
+sudo nano /etc/hosts
+```
+
+Add:
+
+    127.0.0.1   resnet-demo.local
+
+Verify:
+
+``` bash
+ping resnet-demo.local
+```
+
+------------------------------------------------------------------------
+
+## 🚀 Step 7 --- Find NodePort (kind specific)
+
+``` bash
+kubectl get svc -n ingress-nginx
+```
+
+Example output:
+
+    80:32298/TCP
+
+NodePort here = `32298`
+
+------------------------------------------------------------------------
+
+## 🚀 Step 8 --- Test via NodePort (kind local access)
+
+``` bash
+curl -X POST "http://localhost:<NODEPORT>/predict"   -H "Host: resnet-demo.local"   -F "file=@test.jpg"
+```
+
+Example:
+
+``` bash
+curl -X POST "http://localhost:32298/predict"   -H "Host: resnet-demo.local"   -F "file=@test.jpg"
+```
+
+------------------------------------------------------------------------
+
+## 🚀 Step 9 --- Browser Test
+
+Open:
+
+    http://resnet-demo.local/docs
+
+If kind port mapping is configured properly, Swagger UI will load.
+
+------------------------------------------------------------------------
+
+## 🔧 Optional (Recommended for Clean Setup)
+
+For proper port 80 access in kind, create the cluster with:
+
+``` yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 443
+        protocol: TCP
+```
+
+Create cluster:
+
+``` bash
+kind create cluster --config kind-config.yaml
+```
+
+------------------------------------------------------------------------
+
+## 🧪 Debug Commands
+
+If ingress fails:
+
+``` bash
+kubectl describe ingress resnet-mlops-ingress -n mlops
+kubectl logs -n ingress-nginx deploy/ingress-nginx-controller
+kubectl get svc -n ingress-nginx
+```
+
+------------------------------------------------------------------------
+
+## 🏆 Best Practices
+
+-   Use Ingress instead of LoadBalancer for local clusters
+-   Always use versioned Docker images
+-   Keep port-forward only for debugging
+-   Use namespaces for ML workloads
+-   Prefer host-based routing for multi-model setups
+
+------------------------------------------------------------------------
+
+## 🚀 Production Note
+
+In real cloud environments:
+
+    Internet → Cloud LoadBalancer → Ingress → KServe → Pod
+
+This local setup faithfully simulates the same architecture.
+
+------------------------------------------------------------------------
+
+**Status:** Production-style ingress architecture understood and
+implemented ✅
+
+
 # 📈 What This Project Demonstrates
 
 This project showcases **real MLOps fundamentals**:

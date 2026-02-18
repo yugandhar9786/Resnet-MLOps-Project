@@ -1,13 +1,45 @@
-apiVersion: "serving.kserve.io/v1beta1"
-kind: "InferenceService"
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
 metadata:
   name: resnet-mlops
   namespace: mlops
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment
 spec:
   predictor:
+    minReplicas: 1
+    maxReplicas: 3
     containers:
       - name: kserve-container
-        image: yugandhar7/resnet-mlops:latest
+        image: yugandhar7/resnet-mlops:v1.0.0   # ✅ use versioned tag
+        imagePullPolicy: IfNotPresent
+
         ports:
           - containerPort: 8000
+
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+
+        readinessProbe:
+          httpGet:
+            path: /docs
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 3
+
+        livenessProbe:
+          httpGet:
+            path: /docs
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 3
 
